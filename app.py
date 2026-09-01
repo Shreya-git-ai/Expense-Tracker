@@ -28,7 +28,26 @@ from ui import add_expense, manage_expense, dashboard, charts, filters_export
 # Create the database tables on startup (safe to call every run - see
 # db_setup.py, CREATE TABLE IF NOT EXISTS is idempotent).
 init_db()
-
+st.markdown("""
+    <style>
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f172a, #1e293b);
+        border-right: 1px solid #2d3b52;
+    }
+    section[data-testid="stSidebar"] h1 {
+        color: #f8fafc;
+        font-size: 20px;
+    }
+    section[data-testid="stSidebar"] label {
+        color: #cbd5e1 !important;
+        font-size: 15px;
+        padding: 8px 0px;
+    }
+    section[data-testid="stSidebar"] [data-testid="stRadio"] > div {
+        gap: 4px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 st.set_page_config(page_title="Expense Tracker", layout="wide")
 
 # --- GLOBAL STYLES: applied on every page, not just Dashboard ---
@@ -77,7 +96,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Expense Tracker")
+st.title("FinTrack")
 
 # --- Sidebar branding + nav ---
 st.sidebar.markdown("""
