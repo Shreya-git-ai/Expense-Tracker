@@ -28,6 +28,24 @@ def show():
             font-size: 24px;
             font-weight: 700;
         }
+
+        /* Sidebar polish */
+        section[data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #0f172a, #1e293b);
+            border-right: 1px solid #2d3b52;
+        }
+        section[data-testid="stSidebar"] h1 {
+            color: #f8fafc;
+            font-size: 20px;
+        }
+        section[data-testid="stSidebar"] label {
+            color: #cbd5e1;
+            font-size: 15px;
+            padding: 8px 0px;
+        }
+        section[data-testid="stSidebar"] [data-testid="stRadio"] > div {
+            gap: 4px;
+        }
         </style>
     """, unsafe_allow_html=True)
 
