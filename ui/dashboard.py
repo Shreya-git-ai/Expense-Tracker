@@ -20,7 +20,7 @@ def show():
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Spend", f"₹{total:,.2f}")
     col2.metric("Average Spend", f"₹{avg:,.2f}")
-    col3.metric("Highest Expense", f"₹{highest:,.2f}")
+    col3.metric("Highest Expense", f"₹{highest:,.2f}", delta=f"{(highest/total*100):.1f}% of total", delta_color="off")
 
     # --- Budget progress ---
     st.subheader("Monthly Budget")
@@ -29,16 +29,15 @@ def show():
         st.progress(spent_pct)
         remaining = budget_limit - total
         if remaining >= 0:
-            st.write(f"₹{total:,.2f} / ₹{budget_limit:,.2f} spent — ₹{remaining:,.2f} remaining")
+            st.success(f"₹{total:,.2f} / ₹{budget_limit:,.2f} spent — ₹{remaining:,.2f} remaining")
         else:
-            st.write(f"₹{total:,.2f} / ₹{budget_limit:,.2f} spent — over budget by ₹{-remaining:,.2f}")
-    else:
-        st.warning("No budget set for this month.")
+            st.error(f"₹{total:,.2f} / ₹{budget_limit:,.2f} spent — over budget by ₹{-remaining:,.2f}")
+            st.warning("No budget set for this month.")
 
     # --- Top 5 biggest expenses ---
     st.subheader("Top 5 Biggest Expenses")
     top5 = df.nlargest(5, 'amount')[['date', 'category', 'amount', 'description']]
-    st.table(top5)
+    st.dataframe(top5, use_container_width=True)
 
 
 # ---------------------------------------------------------
