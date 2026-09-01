@@ -245,12 +245,10 @@ def _show_metric_cards(df, budget):
 
 
 def _show_insights(df):
-    """Renders the Smart Insights section using generate_insights()."""
     st.markdown('<div class="section-header" style="font-size:19px;">Smart Insights</div>', unsafe_allow_html=True)
     for insight in generate_insights(df):
-        st.markdown(f'<div class="insight-card">{insight}</div>', unsafe_allow_html=True)
-
-
+        insight_html = insight.replace("**", "<strong>", 1).replace("**", "</strong>", 1)
+        st.markdown(f'<div class="insight-card">{insight_html}</div>', unsafe_allow_html=True)
 def _show_budget_progress(total_spent, budget, current_month):
     """
     Renders the budget progress bar with color-coded status
