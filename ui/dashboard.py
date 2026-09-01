@@ -3,62 +3,6 @@ import pandas as pd
 from datetime import datetime
 from database.db_operations import get_all_expenses, get_budget, set_budget
 
-def generate_insights(df: pd.DataFrame) -> list[str]:
-    insights = []
-    if df.empty:
-        return ["Add some expenses to see insights here!"]
-
-    df = df.copy()
-    df['date'] = pd.to_datetime(df['date'])
-    df['month'] = df['date'].dt.to_period('M')
-    months = sorted(df['month'].unique())
-    current_month = months[-1]
-    current_df = df[df['month'] == current_month]
-
-    if len(months) >= 2:
-        prev_df = df[df['month'] == months[-2]]
-        curr_total = current_df['amount'].sum()
-        prev_total = prev_df['amount'].sum()
-        if prev_total > 0:
-            pct_change = ((curr_total - prev_total) / prev_total) * 100
-            direction = "more" if pct_change > 0 else "less"
-            insights.append(
-                f"📊 You spent **{abs(pct_change):.0f}% {direction}** this month "
-                f"(₹{curr_total:,.0f}) vs last month (₹{prev_total:,.0f})."
-            )
-
-    if not current_df.empty:
-        cat_totals = current_df.groupby('category')['amount'].sum()
-        top_cat = cat_totals.idxmax()
-        top_amount = cat_totals.max()
-        total = current_df['amount'].sum()
-        insights.append(
-            f"🏆 **{top_cat}** is your top category this month — "
-            f"₹{top_amount:,.0f} ({(top_amount/total)*100:.0f}% of total)."
-        )
-        biggest = current_df.loc[current_df['amount'].idxmax()]
-        insights.append(
-            f"💥 Largest single expense: ₹{biggest['amount']:,.0f} "
-            f"on {biggest['category']} ({biggest['date'].strftime('%d %b')})."
-        )
-        days_elapsed = (datetime.now() - current_df['date'].min()).days + 1
-        daily_avg = current_df['amount'].sum() / max(days_elapsed, 1)
-        insights.append(f"📈 At this pace, projected monthly spend: **₹{daily_avg*30:,.0f}**.")
-
-    return insights
-
-
-def _show_insights(df):
-    st.markdown("#### 💡 Smart Insights")
-    for insight in generate_insights(df):
-        st.markdown(f"""
-            <div style="background:#1e293b; border-left:4px solid #6366f1;
-                        padding:12px 16px; border-radius:10px; margin-bottom:8px;
-                        color:#f8fafc;">
-                {insight}
-            </div>
-        """, unsafe_allow_html=True)
-
 
 def show():
     df = get_all_expenses()
@@ -84,6 +28,24 @@ def show():
             font-size: 24px;
             font-weight: 700;
         }
+
+        /* Sidebar polish */
+        section[data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #0f172a, #1e293b);
+            border-right: 1px solid #2d3b52;
+        }
+        section[data-testid="stSidebar"] h1 {
+            color: #f8fafc;
+            font-size: 20px;
+        }
+        section[data-testid="stSidebar"] label {
+            color: #cbd5e1;
+            font-size: 15px;
+            padding: 8px 0px;
+        }
+        section[data-testid="stSidebar"] [data-testid="stRadio"] > div {
+            gap: 4px;
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -99,8 +61,6 @@ def show():
     total_spent = df['amount'].sum()
 
     _show_metric_cards(df, budget)
-    st.write("")
-    _show_insights(df)
     st.write("")
     _show_budget_progress(total_spent, budget, current_month)
     st.write("")
