@@ -30,7 +30,7 @@ from ui import add_expense, manage_expense, dashboard, charts, filters_export
 init_db()
 
 st.set_page_config(page_title="Expense Tracker", layout="wide")
-st.title("💰 Expense Tracker")
+st.title(" Expense Tracker")
 
 st.sidebar.title("Navigation")
 page = st.sidebar.radio(
