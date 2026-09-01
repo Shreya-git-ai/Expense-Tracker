@@ -29,7 +29,7 @@ import pandas as pd
 import streamlit as st
 
 TRANSACTION_COLUMNS = [
-    "id", "date", "type", "amount", "category", "payment_method", "description"
+    "id", "date", "amount", "category", "description"
 ]
 
 CATEGORY_OPTIONS = [
@@ -44,7 +44,7 @@ PAYMENT_METHOD_OPTIONS = [
 ]
 
 DISPLAY_COLUMNS = [
-    "date", "type", "category", "description", "payment_method", "amount"
+    "date", "category", "description", "amount"
 ]
 
 
@@ -71,8 +71,7 @@ def filter_transactions(
         df: source transactions DataFrame (schema above).
         start_date / end_date: inclusive date bounds (str or date-like).
         category: one of CATEGORY_OPTIONS. "All Categories" = no filter.
-        txn_type: one of TYPE_OPTIONS. "All" = no filter.
-        payment_method: one of PAYMENT_METHOD_OPTIONS. "All" = no filter.
+    
         min_amount / max_amount: inclusive numeric bounds.
         search_text: case-insensitive, non-regex substring search on
             the `description` column.
@@ -105,13 +104,7 @@ def filter_transactions(
     if category and category != "All Categories":
         mask &= filtered["category"] == category
 
-    # --- Transaction type ---
-    if txn_type and txn_type != "All":
-        mask &= filtered["type"] == txn_type
-
-    # --- Payment method ---
-    if payment_method and payment_method != "All":
-        mask &= filtered["payment_method"] == payment_method
+    
 
     # --- Amount range (inclusive both ends) ---
     if min_amount is not None:
@@ -140,7 +133,6 @@ def get_top_expenses(df, n=5):
 
     d = df.copy()
     d["amount"] = pd.to_numeric(d["amount"], errors="coerce")
-    d = d[d["type"] == "Expense"]
     d = d.dropna(subset=["amount"])
     d = d.sort_values("amount", ascending=False).head(n)
     return d
@@ -295,13 +287,7 @@ def render_filter_panel(df):
         with col2:
             st.date_input("End Date", value=st.session_state["flt_end_date"], key="flt_end_date")
 
-        col3, col4, col5 = st.columns(3)
-        with col3:
-            st.selectbox("Category", CATEGORY_OPTIONS, key="flt_category")
-        with col4:
-            st.selectbox("Transaction Type", TYPE_OPTIONS, key="flt_type")
-        with col5:
-            st.selectbox("Payment Method", PAYMENT_METHOD_OPTIONS, key="flt_payment_method")
+        st.selectbox("Category", CATEGORY_OPTIONS, key="flt_category")
 
         col6, col7 = st.columns(2)
         with col6:
@@ -323,8 +309,7 @@ def render_filter_panel(df):
         start_date=st.session_state["flt_start_date"],
         end_date=st.session_state["flt_end_date"],
         category=st.session_state["flt_category"],
-        txn_type=st.session_state["flt_type"],
-        payment_method=st.session_state["flt_payment_method"],
+        
         min_amount=min_amount,
         max_amount=max_amount,
         search_text=st.session_state["flt_search"],
@@ -352,13 +337,11 @@ def render_filtered_table(filtered_df, original_df=None):
     display_df["date"] = pd.to_datetime(display_df["date"], errors="coerce").dt.strftime("%Y-%m-%d")
     display_df["amount"] = display_df["amount"].apply(_format_currency)
     display_df = display_df[DISPLAY_COLUMNS].rename(columns={
-        "date": "Date",
-        "type": "Type",
-        "category": "Category",
-        "description": "Description",
-        "payment_method": "Payment Method",
-        "amount": "Amount",
-    })
+    "date": "Date",
+    "category": "Category",
+    "description": "Description",
+    "amount": "Amount",
+})
 
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 
@@ -373,8 +356,8 @@ def render_export_summary(filtered_df):
     else:
         amounts = pd.to_numeric(filtered_df["amount"], errors="coerce")
         record_count = len(filtered_df)
-        total_expense = amounts[filtered_df["type"] == "Expense"].sum()
-        total_income = amounts[filtered_df["type"] == "Income"].sum()
+        total_expense = amounts.sum()
+        total_income = 0.0
 
     st.markdown("#### Export Summary")
     c1, c2, c3 = st.columns(3)
