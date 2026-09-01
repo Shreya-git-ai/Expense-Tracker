@@ -1,4 +1,4 @@
-# 💰 Smart Expense Tracker
+# 💰 ExpenseIQ
 
 A Python-based personal expense tracker with graphical analytics, built as
 a college project (B.Tech CSE).
@@ -16,6 +16,11 @@ SQLite, and Pandas.
   Entertainment, Other
 - **Dashboard** — total spend, average daily spend, highest spending
   category, budget progress
+- **Smart Insights** — automatic, rule-based observations on your spending:
+  - Month-over-month spend comparison
+  - Top spending category with % share of total
+  - Largest single expense of the month
+  - Projected monthly spend based on current daily pace
 - **Monthly Budget** — set a budget per month, track remaining balance
 - **Graphical Analytics**
   - Category-wise spending (donut chart)
@@ -37,10 +42,10 @@ SQLite, and Pandas.
 | UI | Streamlit | Fast to build, pure-Python UI, no separate frontend needed |
 | Database | SQLite (`sqlite3`) | File-based, zero-config, perfect for a single-user local app |
 | Data handling | Pandas | Grouping, aggregation, filtering — all built on DataFrames |
-| Visualization | Matplotlib | Integrates directly with Pandas; simple to explain line-by-line |
+| Visualization | Matplotlib / Plotly | Matplotlib for core charts; Plotly for dashboard visuals |
 
-No external APIs, no authentication, no ML/AI — every feature is rule-based
-and fully explainable, by design.
+No external APIs, no authentication, no ML/AI — every feature (including
+Smart Insights) is rule-based and fully explainable, by design.
 
 ---
 
@@ -60,8 +65,8 @@ expense-tracker/
 ├── ui/
 │   ├── add_expense.py      # Add expense form
 │   ├── manage_expense.py   # Edit/delete UI
-│   ├── dashboard.py        # Metric cards, budget progress, recent transactions
-│   ├── charts.py           # All 4 analytics charts
+│   ├── dashboard.py        # Metric cards, Smart Insights, budget progress, recent transactions
+│   ├── charts.py           # All analytics charts
 │   └── filters_export.py   # Filters + CSV export + DB backup
 │
 ├── utils/
@@ -141,7 +146,7 @@ setup needed.
 | Member | Responsibility | Files |
 |---|---|---|
 | **A** | Database & Core Backend | `database/db_setup.py`, `database/db_operations.py`, `ui/add_expense.py`, `ui/manage_expense.py`, `utils/validation.py` |
-| **B** | Dashboard & Budget | `ui/dashboard.py` |
+| **B** | Dashboard, Budget & Smart Insights | `ui/dashboard.py` |
 | **C** | Charts & Analytics | `ui/charts.py` |
 | **D** | Filters, Export & Extras | `ui/filters_export.py`, `utils/categorizer.py` |
 
@@ -157,15 +162,25 @@ This project was deliberately scoped to be **fully explainable and
 demo-ready within a fixed development window**, rather than
 feature-maximal. Key trade-offs made on purpose:
 
-- **Rule-based logic over ML/AI** — e.g. category suggestions (if built)
-  use a keyword dictionary, not a trained model, so behavior is fully
-  transparent.
-- **Matplotlib over Plotly** — less flashy, but every chart line is easy
-  to walk through in viva.
+- **Rule-based logic over ML/AI** — e.g. Smart Insights and category
+  suggestions (if built) use plain aggregation and keyword dictionaries,
+  not trained models, so behavior is fully transparent and demo-safe.
+- **Matplotlib/Plotly over heavier viz libraries** — easy to walk through
+  chart logic line-by-line in viva.
 - **No authentication / multi-user support** — out of scope for a
   single-team local demo.
 - **Hard delete, no undo** — kept simple and bug-free within the time
   budget rather than adding session-state complexity.
+
+---
+
+## What Makes This Different
+
+Most college expense-tracker projects stop at CRUD + charts. ExpenseIQ
+adds a **Smart Insights** layer on the dashboard that reads the same
+data and surfaces the story behind it — month-over-month trends, category
+spikes, and spend pacing — using simple, explainable Pandas logic instead
+of an external AI API.
 
 ---
 
