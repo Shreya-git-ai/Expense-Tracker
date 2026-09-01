@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+data/expenses.db
+.venv/
+venv/
+.streamlit/
