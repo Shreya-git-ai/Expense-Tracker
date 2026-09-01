@@ -22,12 +22,16 @@ DAY_ORDER = [
 CATEGORY_COLORS = {
     "Food": "#4C7CF3",
     "Travel": "#3FC1C9",
+    "Transport": "#3FC1C9",
     "Shopping": "#FF9F45",
     "Bills": "#F45B69",
     "Entertainment": "#9B6BF2",
     "Other": "#B0B7C3",
 }
-FALLBACK_COLORS = ["#4C7CF3", "#3FC1C9", "#FF9F45", "#F45B69", "#9B6BF2", "#B0B7C3"]
+# Kept separate from CATEGORY_COLORS' values so an unmapped category
+# (e.g. "Transport") never gets assigned the same color as a mapped one
+# (e.g. "Food") — that collision was making wedges indistinguishable.
+FALLBACK_COLORS = ["#5BC08A", "#F2C14E", "#EC407A", "#26A69A", "#7E57C2", "#EF6C00"]
 
 
 def _colors_for(labels):
@@ -144,24 +148,37 @@ def _show_category_pie(expenses_df):
 
     colors = _colors_for(category_totals.index)
 
-    figure, axis = plt.subplots()
+    figure, axis = plt.subplots(figsize=(4, 4))
 
-    # Pie chart with a hole in the centre = donut chart
-    wedges, _texts, _autotexts = axis.pie(
+    # Slices under ~5% of the total are too thin for readable percentage
+    # text no matter the font size -- showing nothing there beats showing
+    # overlapping garbage, which is what was happening before.
+    def _autopct(pct):
+        return f"{pct:.0f}%" if pct >= 5 else ""
+
+    # Full pie chart (no center hole)
+    wedges, _texts, autotexts = axis.pie(
         category_totals.values,
-        autopct="%1.1f%%",
+        autopct=_autopct,
         startangle=90,
-        wedgeprops=dict(width=0.4),
+        pctdistance=0.7,
         colors=colors,
         textprops=dict(color="white")
     )
+    plt.setp(autotexts, size=8)
 
     axis.set_ylabel("")
     axis.set_title("Category-wise Spending")
 
-    # Side legend instead of labels crowding the donut, like the reference image
+    # Round dot legend markers to the side, matching the reference image
+    # (matplotlib's default pie legend uses wedge-shaped swatches instead)
+    legend_handles = [
+        plt.Line2D([0], [0], marker="o", color="none",
+                   markerfacecolor=color, markersize=9)
+        for color in colors
+    ]
     axis.legend(
-        wedges,
+        legend_handles,
         category_totals.index,
         loc="center left",
         bbox_to_anchor=(1.0, 0.5),
@@ -169,7 +186,7 @@ def _show_category_pie(expenses_df):
     )
 
     figure.tight_layout()
-    st.pyplot(figure)
+    st.pyplot(figure, use_container_width=False)
     plt.close(figure)
 
 
@@ -197,7 +214,7 @@ def _show_monthly_trend(expenses_df):
     # Convert months into readable labels
     monthly_totals.index = monthly_totals.index.astype(str)
 
-    figure, axis = plt.subplots()
+    figure, axis = plt.subplots(figsize=(5.5, 3))
 
     # Bar chart makes monthly comparison easy
     monthly_totals.plot(
@@ -210,6 +227,11 @@ def _show_monthly_trend(expenses_df):
     axis.set_ylabel("Amount (₹)")
     axis.set_title("Monthly Spending Trend")
 
+    # Drop the box border and add light gridlines, like the reference image
+    axis.spines[["top", "right"]].set_visible(False)
+    axis.grid(axis="y", linestyle="-", alpha=0.3)
+    axis.set_axisbelow(True)
+
     # Rotate labels so they don't overlap
     plt.setp(
         axis.get_xticklabels(),
@@ -218,7 +240,7 @@ def _show_monthly_trend(expenses_df):
     )
 
     figure.tight_layout()
-    st.pyplot(figure)
+    st.pyplot(figure, use_container_width=False)
     plt.close(figure)
 
 
@@ -243,7 +265,7 @@ def _show_day_of_week_pattern(expenses_df):
         .reindex(DAY_ORDER, fill_value=0)
     )
 
-    figure, axis = plt.subplots()
+    figure, axis = plt.subplots(figsize=(5.5, 3))
 
     day_totals.plot(
         kind="bar",
@@ -255,6 +277,11 @@ def _show_day_of_week_pattern(expenses_df):
     axis.set_ylabel("Amount (₹)")
     axis.set_title("Spending by Day of Week")
 
+    # Drop the box border and add light gridlines, like the reference image
+    axis.spines[["top", "right"]].set_visible(False)
+    axis.grid(axis="y", linestyle="-", alpha=0.3)
+    axis.set_axisbelow(True)
+
     # Rotate labels for readability
     plt.setp(
         axis.get_xticklabels(),
@@ -263,7 +290,7 @@ def _show_day_of_week_pattern(expenses_df):
     )
 
     figure.tight_layout()
-    st.pyplot(figure)
+    st.pyplot(figure, use_container_width=False)
     plt.close(figure)
 
 
@@ -281,7 +308,7 @@ def _show_top5_categories(expenses_df):
         .head(5)
     )
 
-    figure, axis = plt.subplots()
+    figure, axis = plt.subplots(figsize=(5.5, 3))
 
     # Sort ascending so the highest value appears at the top
     sorted_totals = category_totals.sort_values()
@@ -297,8 +324,13 @@ def _show_top5_categories(expenses_df):
     axis.set_ylabel("Category")
     axis.set_title("Top 5 Categories")
 
+    # Drop the box border and add light gridlines, like the reference image
+    axis.spines[["top", "right"]].set_visible(False)
+    axis.grid(axis="x", linestyle="-", alpha=0.3)
+    axis.set_axisbelow(True)
+
     figure.tight_layout()
-    st.pyplot(figure)
+    st.pyplot(figure, use_container_width=False)
     plt.close(figure)
 
 
