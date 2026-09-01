@@ -17,7 +17,7 @@ from utils.validation import validate_expense, VALID_CATEGORIES
 
 
 def show():
-    st.subheader("➕ Add Expense")
+    st.subheader(" Add Expense")
 
     # st.form groups all the inputs below into ONE unit that only triggers
     # a script re-run when the submit button is clicked - not on every

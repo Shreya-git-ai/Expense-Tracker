@@ -30,11 +30,65 @@ from ui import add_expense, manage_expense, dashboard, charts, filters_export
 init_db()
 
 st.set_page_config(page_title="Expense Tracker", layout="wide")
-st.title(" Expense Tracker")
 
-st.sidebar.title("Navigation")
+# --- GLOBAL STYLES: applied on every page, not just Dashboard ---
+st.markdown("""
+    <style>
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+        max-width: 1200px;
+    }
+
+    /* Sidebar polish - global so it's consistent across all pages */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f172a, #1e293b);
+        border-right: 1px solid #2d3b52;
+    }
+    section[data-testid="stSidebar"] label {
+        color: #cbd5e1;
+        font-size: 15px;
+        padding: 8px 0px;
+    }
+    section[data-testid="stSidebar"] [data-testid="stRadio"] > div {
+        gap: 4px;
+    }
+
+    /* Global input styling - keeps Filters/Manage/Add pages consistent */
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stNumberInput"] input,
+    div[data-testid="stDateInput"] input,
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] {
+        background-color: #1e293b !important;
+        border: 1px solid #2d3b52 !important;
+        border-radius: 8px !important;
+        color: #f8fafc !important;
+    }
+
+    button[kind="secondary"], button[kind="primary"] {
+        border-radius: 8px !important;
+    }
+
+    div[data-testid="stDataFrame"] {
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid #2d3b52;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.title("Expense Tracker")
+
+# --- Sidebar branding + nav ---
+st.sidebar.markdown("""
+    <div style="padding: 8px 0 20px 0;">
+        <div style="font-size: 20px; font-weight: 700; color: #f8fafc;">Expense Tracker</div>
+        <div style="font-size: 13px; color: #94a3b8;">Track. Analyze. Save.</div>
+    </div>
+""", unsafe_allow_html=True)
+
 page = st.sidebar.radio(
-    "Go to",
+    "",
     [
         "Dashboard",
         "Add Expense",
@@ -42,6 +96,7 @@ page = st.sidebar.radio(
         "Charts",
         "Filters & Export",
     ],
+    label_visibility="collapsed",
 )
 
 if page == "Dashboard":

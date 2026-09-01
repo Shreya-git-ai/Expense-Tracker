@@ -1,35 +1,156 @@
+"""
+ui/dashboard.py
+
+Main Dashboard page for the Expense Tracker app.
+Shows summary metrics, smart insights, budget progress,
+top expenses, and recent transactions.
+
+Reads data via database/db_operations.py — no direct SQL here.
+"""
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 from database.db_operations import get_all_expenses, get_budget, set_budget
 
 
+def generate_insights(df: pd.DataFrame) -> list[str]:
+    """
+    Analyzes the expense DataFrame and returns a list of
+    human-readable insight strings (e.g. spend comparisons,
+    top category, biggest expense, projected monthly spend).
+
+    Returns a friendly placeholder message if there is no data yet.
+    """
+    insights = []
+    if df.empty:
+        return ["Add some expenses to see insights here!"]
+
+    # Work on a copy so we never mutate the caller's original DataFrame
+    df = df.copy()
+    df['date'] = pd.to_datetime(df['date'])
+    df['month'] = df['date'].dt.to_period('M')
+
+    months = sorted(df['month'].unique())
+    current_month = months[-1]
+    current_df = df[df['month'] == current_month]
+
+    # --- Month-over-month spend comparison (only if we have 2+ months of data) ---
+    if len(months) >= 2:
+        prev_df = df[df['month'] == months[-2]]
+        curr_total = current_df['amount'].sum()
+        prev_total = prev_df['amount'].sum()
+        if prev_total > 0:
+            pct_change = ((curr_total - prev_total) / prev_total) * 100
+            direction = "more" if pct_change > 0 else "less"
+            insights.append(
+                f"You spent **{abs(pct_change):.0f}% {direction}** this month "
+                f"(Rs.{curr_total:,.0f}) vs last month (Rs.{prev_total:,.0f})."
+            )
+
+    # --- Top category, biggest single expense, and projected monthly spend ---
+    if not current_df.empty:
+        cat_totals = current_df.groupby('category')['amount'].sum()
+        top_cat = cat_totals.idxmax()
+        top_amount = cat_totals.max()
+        total = current_df['amount'].sum()
+        insights.append(
+            f"**{top_cat}** is your top category this month - "
+            f"Rs.{top_amount:,.0f} ({(top_amount/total)*100:.0f}% of total)."
+        )
+
+        biggest = current_df.loc[current_df['amount'].idxmax()]
+        insights.append(
+            f"Largest single expense: Rs.{biggest['amount']:,.0f} "
+            f"on {biggest['category']} ({biggest['date'].strftime('%d %b')})."
+        )
+
+        # Simple linear projection: (spend so far / days elapsed) * 30
+        days_elapsed = (datetime.now() - current_df['date'].min()).days + 1
+        daily_avg = current_df['amount'].sum() / max(days_elapsed, 1)
+        insights.append(f"At this pace, projected monthly spend: **Rs.{daily_avg*30:,.0f}**.")
+
+    return insights
+
+
 def show():
+    """
+    Entry point for the Dashboard page. Called from app.py.
+    Renders all sections in order: metric cards, insights,
+    budget progress, and the two expense tables.
+    """
     df = get_all_expenses()
 
+    # --- Global CSS for this page (also styles the sidebar app-wide) ---
     st.markdown("""
         <style>
+        .block-container {
+            padding-top: 2rem;
+            padding-bottom: 3rem;
+            max-width: 1200px;
+        }
+
+        /* Metric card styling (Total Expenses, Budget, etc.) */
         .metric-card {
             background: linear-gradient(145deg, #1e293b, #111827);
             border: 1px solid #2d3b52;
             border-radius: 14px;
-            padding: 20px 22px;
+            padding: 22px 24px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            border-color: #6366f1;
         }
         .metric-label {
             color: #94a3b8;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
-            margin-bottom: 6px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
             white-space: nowrap;
         }
         .metric-value {
             color: #f8fafc;
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 700;
         }
 
-        /* Sidebar polish */
+        /* Smart Insights card styling */
+        .insight-card {
+            background: #1e293b;
+            border-left: 4px solid #6366f1;
+            padding: 14px 18px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            color: #f1f5f9;
+            font-size: 15px;
+        }
+
+        /* Section headers used throughout the page */
+        .section-header {
+            font-size: 22px;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }
+        .section-sub {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        /* Divider line between sections */
+        hr.section-divider {
+            border: none;
+            border-top: 1px solid #2d3b52;
+            margin: 36px 0 28px 0;
+        }
+
+        /* Sidebar polish — applies app-wide since this CSS loads globally */
         section[data-testid="stSidebar"] {
             background: linear-gradient(180deg, #0f172a, #1e293b);
             border-right: 1px solid #2d3b52;
@@ -49,9 +170,11 @@ def show():
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown("## Expense Dashboard")
-    st.caption("Your spending at a glance")
+    # --- Page title ---
+    st.markdown('<div class="section-header">Expense Dashboard</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Your spending at a glance</div>', unsafe_allow_html=True)
 
+    # Guard clause: nothing to show yet, avoid running calculations on an empty DataFrame
     if df.empty:
         st.info("No expenses recorded yet. Add your first expense to see insights here.")
         return
@@ -60,16 +183,28 @@ def show():
     budget = get_budget(current_month)
     total_spent = df['amount'].sum()
 
+    # --- Render each section in order ---
     _show_metric_cards(df, budget)
-    st.write("")
+
+    st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+    _show_insights(df)
+
+    st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
     _show_budget_progress(total_spent, budget, current_month)
-    st.write("")
-    _show_top5_expenses(df)
-    st.write("")
-    _show_recent_transactions(df)
+
+    st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+    col_a, col_b = st.columns(2)
+    with col_a:
+        _show_top5_expenses(df)
+    with col_b:
+        _show_recent_transactions(df)
 
 
 def _card(col, label, value):
+    """
+    Renders a single styled metric card inside the given Streamlit column.
+    Used for all top-row summary metrics (Total Expenses, Budget, etc.).
+    """
     with col:
         st.markdown(f"""
             <div class="metric-card">
@@ -80,41 +215,60 @@ def _card(col, label, value):
 
 
 def _show_metric_cards(df, budget):
+    """
+    Row 1: Total Expenses / Monthly Budget / Remaining.
+    Row 2: Avg Daily Spend / Top Category.
+    """
     total_spent = df['amount'].sum()
     now = datetime.now()
-    days_elapsed = now.day
+    days_elapsed = now.day  # days elapsed so far in the current month
     avg_daily = total_spent / days_elapsed if days_elapsed else 0
     top_category = df.groupby('category')['amount'].sum().idxmax()
 
-    row1 = st.columns(3)
+    row1 = st.columns(3, gap="medium")
     _card(row1[0], "Total Expenses", f"Rs.{total_spent:,.2f}")
+
     if budget is not None:
         remaining = budget - total_spent
         _card(row1[1], "Monthly Budget", f"Rs.{budget:,.2f}")
         _card(row1[2], "Remaining", f"Rs.{remaining:,.2f}")
     else:
+        # No budget set yet — show placeholders instead of crashing on None
         _card(row1[1], "Monthly Budget", "Not set")
         _card(row1[2], "Remaining", "--")
 
-    st.write("")
+    st.write("")  # small vertical spacer between the two card rows
 
-    row2 = st.columns(2)
+    row2 = st.columns(2, gap="medium")
     _card(row2[0], "Avg Daily Spend", f"Rs.{avg_daily:,.2f}")
     _card(row2[1], "Top Category", top_category)
 
 
+def _show_insights(df):
+    """Renders the Smart Insights section using generate_insights()."""
+    st.markdown('<div class="section-header" style="font-size:19px;">Smart Insights</div>', unsafe_allow_html=True)
+    for insight in generate_insights(df):
+        st.markdown(f'<div class="insight-card">{insight}</div>', unsafe_allow_html=True)
+
+
 def _show_budget_progress(total_spent, budget, current_month):
-    st.markdown("#### Monthly Budget")
+    """
+    Renders the budget progress bar with color-coded status
+    (green = on track, yellow = near limit, red = exceeded),
+    plus a form to set or update the current month's budget.
+    """
+    st.markdown('<div class="section-header" style="font-size:19px;">Monthly Budget</div>', unsafe_allow_html=True)
 
     if budget is None:
         st.info("No budget set for this month yet.")
     else:
         ratio = total_spent / budget if budget > 0 else 0
-        percentage_used = min(ratio, 1.0)
+        percentage_used = min(ratio, 1.0)  # clamp so the bar never overflows visually
 
         st.progress(percentage_used)
         st.caption(f"{percentage_used * 100:.0f}% of budget used  -  Rs.{total_spent:,.2f} of Rs.{budget:,.2f}")
 
+        # Three-tier feedback: exceeded / near limit / on track
         if ratio >= 1.0:
             st.error(f"Budget exceeded by Rs.{total_spent - budget:,.2f}!")
         elif ratio >= 0.9:
@@ -122,13 +276,14 @@ def _show_budget_progress(total_spent, budget, current_month):
         else:
             st.success(f"You're on track - Rs.{budget - total_spent:,.2f} remaining")
 
+    # --- Form to set/update this month's budget ---
     with st.expander("Set or update this month's budget"):
         with st.form("set_budget_form"):
             new_budget = st.number_input(
                 "Budget amount (Rs.)",
                 min_value=0.0,
                 step=100.0,
-                value=float(budget) if budget else 0.0
+                value=float(budget) if budget else 0.0  # pre-fill with existing budget if set
             )
             submitted = st.form_submit_button("Save Budget")
             if submitted:
@@ -137,11 +292,12 @@ def _show_budget_progress(total_spent, budget, current_month):
                 else:
                     set_budget(current_month, new_budget)
                     st.success(f"Budget for {current_month} set to Rs.{new_budget:,.2f}")
-                    st.rerun()
+                    st.rerun()  # refresh the page so the new budget reflects immediately
 
 
 def _show_top5_expenses(df):
-    st.markdown("#### Top 5 Biggest Expenses")
+    """Renders a table of the 5 largest individual expenses."""
+    st.markdown('<div class="section-header" style="font-size:17px;">Top 5 Biggest Expenses</div>', unsafe_allow_html=True)
     top5 = df.nlargest(5, 'amount')[['date', 'category', 'amount', 'description']].reset_index(drop=True)
     top5_display = top5.copy()
     top5_display['amount'] = top5_display['amount'].map(lambda x: f"Rs.{x:,.2f}")
@@ -150,7 +306,8 @@ def _show_top5_expenses(df):
 
 
 def _show_recent_transactions(df):
-    st.markdown("#### Recent Transactions")
+    """Renders a table of the 10 most recent transactions."""
+    st.markdown('<div class="section-header" style="font-size:17px;">Recent Transactions</div>', unsafe_allow_html=True)
     recent = df.head(10)[['date', 'category', 'description', 'amount']].copy()
     recent['amount'] = recent['amount'].map(lambda x: f"Rs.{x:,.2f}")
     recent.columns = ['Date', 'Category', 'Description', 'Amount']
@@ -158,4 +315,5 @@ def _show_recent_transactions(df):
 
 
 if __name__ == "__main__":
+    # Allows standalone testing: `py -m streamlit run ui/dashboard.py`
     show()

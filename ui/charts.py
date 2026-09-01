@@ -19,6 +19,29 @@ DAY_ORDER = [
     "Sunday"
 ]
 
+CATEGORY_COLORS = {
+    "Food": "#4C7CF3",
+    "Travel": "#3FC1C9",
+    "Shopping": "#FF9F45",
+    "Bills": "#F45B69",
+    "Entertainment": "#9B6BF2",
+    "Other": "#B0B7C3",
+}
+FALLBACK_COLORS = ["#4C7CF3", "#3FC1C9", "#FF9F45", "#F45B69", "#9B6BF2", "#B0B7C3"]
+
+
+def _colors_for(labels):
+    """Return a color for each label, using CATEGORY_COLORS when known."""
+    colors = []
+    next_fallback = 0
+    for label in labels:
+        if label in CATEGORY_COLORS:
+            colors.append(CATEGORY_COLORS[label])
+        else:
+            colors.append(FALLBACK_COLORS[next_fallback % len(FALLBACK_COLORS)])
+            next_fallback += 1
+    return colors
+
 
 def show(expenses_df=None):
     """Display all four charts"""
@@ -50,23 +73,11 @@ def show(expenses_df=None):
     # Remove rows with invalid dates
     cleaned_data = cleaned_data.dropna(subset=["date"])
 
-    # First row
-    left_column, right_column = st.columns(2)
-
-    with left_column:
-        _show_category_pie(cleaned_data)
-
-    with right_column:
-        _show_monthly_trend(cleaned_data)
-
-    # Second row
-    left_column, right_column = st.columns(2)
-
-    with left_column:
-        _show_day_of_week_pattern(cleaned_data)
-
-    with right_column:
-        _show_top5_categories(cleaned_data)
+    # Charts stacked one below another, not side by side
+    _show_category_pie(cleaned_data)
+    _show_monthly_trend(cleaned_data)
+    _show_day_of_week_pattern(cleaned_data)
+    _show_top5_categories(cleaned_data)
 
 
 def _clean_expenses(expenses_df):
@@ -131,19 +142,31 @@ def _show_category_pie(expenses_df):
         .sort_values(ascending=False)
     )
 
+    colors = _colors_for(category_totals.index)
+
     figure, axis = plt.subplots()
 
     # Pie chart with a hole in the centre = donut chart
-    category_totals.plot(
-        kind="pie",
-        ax=axis,
+    wedges, _texts, _autotexts = axis.pie(
+        category_totals.values,
         autopct="%1.1f%%",
         startangle=90,
-        wedgeprops=dict(width=0.4)
+        wedgeprops=dict(width=0.4),
+        colors=colors,
+        textprops=dict(color="white")
     )
 
     axis.set_ylabel("")
     axis.set_title("Category-wise Spending")
+
+    # Side legend instead of labels crowding the donut, like the reference image
+    axis.legend(
+        wedges,
+        category_totals.index,
+        loc="center left",
+        bbox_to_anchor=(1.0, 0.5),
+        frameon=False,
+    )
 
     figure.tight_layout()
     st.pyplot(figure)
@@ -179,7 +202,8 @@ def _show_monthly_trend(expenses_df):
     # Bar chart makes monthly comparison easy
     monthly_totals.plot(
         kind="bar",
-        ax=axis
+        ax=axis,
+        color=CATEGORY_COLORS["Food"]
     )
 
     axis.set_xlabel("Month")
@@ -223,7 +247,8 @@ def _show_day_of_week_pattern(expenses_df):
 
     day_totals.plot(
         kind="bar",
-        ax=axis
+        ax=axis,
+        color=CATEGORY_COLORS["Travel"]
     )
 
     axis.set_xlabel("Day of Week")
@@ -259,9 +284,13 @@ def _show_top5_categories(expenses_df):
     figure, axis = plt.subplots()
 
     # Sort ascending so the highest value appears at the top
-    category_totals.sort_values().plot(
+    sorted_totals = category_totals.sort_values()
+    colors = _colors_for(sorted_totals.index)
+
+    sorted_totals.plot(
         kind="barh",
-        ax=axis
+        ax=axis,
+        color=colors
     )
 
     axis.set_xlabel("Amount (₹)")
