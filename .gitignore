@@ -4,3 +4,4 @@ data/expenses.db
 .venv/
 venv/
 .streamlit/
+data/*.db
