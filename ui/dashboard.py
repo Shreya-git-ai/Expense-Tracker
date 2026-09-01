@@ -26,28 +26,27 @@ def show():
     st.divider()
 
     # --- Budget progress ---
-    left, right = st.columns([1, 1])
-
-    with left:
-        st.subheader("Monthly Budget")
-        if budget_limit and budget_limit > 0:
-            spent_pct = min(total / budget_limit, 1.0)
-            st.progress(spent_pct)
-            remaining = budget_limit - total
-            if remaining >= 0:
-                st.success(f"₹{total:,.2f} / ₹{budget_limit:,.2f} spent — ₹{remaining:,.2f} remaining")
-            else:
-                st.error(f"₹{total:,.2f} / ₹{budget_limit:,.2f} spent — over budget by ₹{-remaining:,.2f}")
+    st.subheader("Monthly Budget")
+    if budget_limit and budget_limit > 0:
+        spent_pct = min(total / budget_limit, 1.0)
+        st.progress(spent_pct)
+        remaining = budget_limit - total
+        if remaining >= 0:
+            st.success(f"₹{total:,.2f} / ₹{budget_limit:,.2f} spent — ₹{remaining:,.2f} remaining")
         else:
-            st.warning("No budget set for this month.")
+            st.error(f"₹{total:,.2f} / ₹{budget_limit:,.2f} spent — over budget by ₹{-remaining:,.2f}")
+    else:
+        st.warning("No budget set for this month.")
 
-    with right:
-        st.subheader("Top 5 Biggest Expenses")
-        icons = {"Food": "🍔", "Travel": "🚗", "Rent": "🏠", "Shopping": "🛍️"}
-        top5 = df.nlargest(5, 'amount')[['date', 'category', 'amount', 'description']].reset_index(drop=True)
-        top5_display = top5.copy()
-        top5_display['category'] = top5_display['category'].map(lambda c: f"{icons.get(c, '📌')} {c}")
-        st.dataframe(top5_display, use_container_width=True)
+    st.divider()
+
+    # --- Top 5 biggest expenses ---
+    st.subheader("Top 5 Biggest Expenses")
+    icons = {"Food": "🍔", "Travel": "🚗", "Rent": "🏠", "Shopping": "🛍️"}
+    top5 = df.nlargest(5, 'amount')[['date', 'category', 'amount', 'description']].reset_index(drop=True)
+    top5_display = top5.copy()
+    top5_display['category'] = top5_display['category'].map(lambda c: f"{icons.get(c, '📌')} {c}")
+    st.dataframe(top5_display, use_container_width=True)
 
 
 # ---------------------------------------------------------
